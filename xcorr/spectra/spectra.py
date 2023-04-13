@@ -58,7 +58,7 @@ class CrossCorrelate(object):
         self.workspace = workspace
 
         pixwin = hp.pixwin(nside)
-        M = workspace.get_bandpower_windows()[:, 0, :, 0]
+        M = workspace.get_bandpower_windows()[0, :, 0, :]
         self._pixwin = np.dot(M, pixwin)
 
         self.pixwin_interp = np.interp(self.ells, np.arange(len(pixwin)), pixwin)

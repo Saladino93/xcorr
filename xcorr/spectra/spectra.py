@@ -4,6 +4,8 @@ import healpy as hp
 
 import numpy as np
 
+from xcorr.spectra import shotutils
+
 
 class AlphaNmtField(nmt.NmtField):
     """
@@ -63,6 +65,8 @@ class CrossCorrelate(object):
 
         self.pixwin_interp = np.interp(self.ells, np.arange(len(pixwin)), pixwin)
 
+        self.coupled_shape = nmt.compute_coupled_cell(fA, fB).shape
+
     def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
         fB = fA if fB is None else fB
         factor = fA.alpha * fB.alpha
@@ -78,7 +82,7 @@ class CrossCorrelate(object):
         return self.workspace.decouple_cell(cl_coupled)
 
     def bin_theory(self, cl_theory: np.ndarray):
-        return self.decouple_cell(self.couple_cell([cl_theory]))
+        return self.decouple_cell(self.couple_cell([cl_theory]))[0]
 
     @property
     def ell(self):
@@ -102,3 +106,18 @@ class MapsReader(CrossCorrelate):
         fA = AlphaNmtField(self.maskA, [mappaA], masked_on_input = self.masked_on_input_A, alpha = factorA)
         fB = AlphaNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha = factorB)
         return super().__call__(fA, fB)
+    
+
+    def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha: float = 1):
+        assert np.allclose(self.maskA, self.maskB), "The two fields must have the same mask as this is for the auto."
+        #actually not necessary to have same mask, just they have to be of type galaxy. so maybe in the future we can create a custom type.
+            
+        if mask is None:
+            mask = self.maskA
+        else:
+            try:
+                assert np.allclose(mask, self.maskA)
+            except:
+                assert np.allclose(mask, self.maskB), "Mask must be either the mask of the first field or the mask of the second field."
+                
+        return shotutils.get_effective_n2_from_counts(self.workspace, self.coupled_shape, counts, mask, weights)/alpha**2.

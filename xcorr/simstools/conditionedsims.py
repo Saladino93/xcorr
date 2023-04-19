@@ -26,7 +26,7 @@ class ConditionedSims(object):
         get_AB : callable
             Function that returns the cross-correlation power spectrum between field A and B.
         realized_field_index : int
-            Index of the fixed field in the power spectra function.
+            Index of the fixed field in the power spectra function. e.g. "k" for a fixed CMB lensing realization, with "kk" for CMB lensing power spectrum
         """
 
         self.Nfields = Nfields
@@ -41,6 +41,7 @@ class ConditionedSims(object):
         Generates the conditioned Gaussian simulations.
         """
 
+        #call this to generate a random seed for each realization
         rng = np.random.default_rng(seed = seed)
 
         correlated_alms = self.get_correlated_part(input_alms, self.filter_correlated)
@@ -54,7 +55,7 @@ class ConditionedSims(object):
     def generate_maps(self, seed:int, input_alms: np.ndarray, nside: int):
         total_alms = self.generate_alm(seed, input_alms)
         alm2map = lambda alm: hp.alm2map(alm, nside)
-        maps = map(alm2map, total_alms)
+        maps = list(map(alm2map, total_alms))
         return maps
     
 

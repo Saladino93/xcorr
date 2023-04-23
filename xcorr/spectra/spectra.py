@@ -14,7 +14,7 @@ class AlphaNmtField(nmt.NmtField):
     Useful when simulating rescaled gaussian delta_g maps and Poisson populating them.
     """
     def __init__(self, mask, maps, masked_on_input, alpha: float = 1., **kwargs):
-        super().__init__(mask, maps, masked_on_input, **kwargs)
+        super().__init__(mask = mask, maps = maps, masked_on_input = masked_on_input, **kwargs)
         self.alpha = alpha
 
 
@@ -41,31 +41,40 @@ class CrossCorrelate(object):
         Scaling factor for the input maps. This is for gaussian deltag simulations with an alpha factor to Poisson populate the maps.
     """
 
-    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int):
+    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, filename: str = None, lmax_sht: int = -1):
         self.maskA = maskA
         self.maskB = maskB
 
         self.masked_on_input_A = masked_on_input_A
         self.masked_on_input_B = masked_on_input_B
+
+        self.nside = nside
         
         self.binning = binning
         self.ells = binning.get_effective_ells()
 
-        fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A)
-        fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B)
+        fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A, lmax_sht = lmax_sht)
+        fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B, lmax_sht = lmax_sht)
 
-        workspace = nmt.NmtWorkspace()
-        workspace.compute_coupling_matrix(fA, fB, binning)
+        self.filename = filename
+        if filename is not None:
+            self.load_workspace(filename)
+        else:
+            workspace = nmt.NmtWorkspace()
+            workspace.compute_coupling_matrix(fA, fB, binning)
 
         self.workspace = workspace
 
-        pixwin = hp.pixwin(nside)
+        lmaxpix = min(3 * nside - 1, lmax_sht)
+        pixwin = hp.pixwin(nside)[:lmaxpix+1]
         M = workspace.get_bandpower_windows()[0, :, 0, :]
         self._pixwin = np.dot(M, pixwin)
 
         self.pixwin_interp = np.interp(self.ells, np.arange(len(pixwin)), pixwin)
 
         self.coupled_shape = nmt.compute_coupled_cell(fA, fB).shape
+
+
 
     def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
         fB = fA if fB is None else fB
@@ -91,6 +100,14 @@ class CrossCorrelate(object):
     @property
     def pixwin(self):
         return self._pixwin
+    
+    def save_workspace(self, filename: str = None):
+        filename = self.filename if filename is None else filename
+        self.workspace.write_to(filename)
+
+    def load_workspace(self, filename: str = None):
+        self.workspace = nmt.NmtWorkspace()
+        self.workspace.read_from(filename)
 
 
 
@@ -98,13 +115,13 @@ class CrossCorrelate(object):
 
 
 class MapsReader(CrossCorrelate):
-    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int):
-        super().__init__(maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside)
+    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, lmax_sht: int = -1):
+        super().__init__(maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside, lmax_sht = lmax_sht)
 
-    def __call__(self, mappaA: np.ndarray, mappaB: np.ndarray = None, factorA: float = 1, factorB: float = 1):
+    def __call__(self, mappaA: np.ndarray, mappaB: np.ndarray = None, factorA: float = 1, factorB: float = 1, lmax: int = -1):
         mappaB = mappaA if mappaB is None else mappaB
-        fA = AlphaNmtField(self.maskA, [mappaA], masked_on_input = self.masked_on_input_A, alpha = factorA)
-        fB = AlphaNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha = factorB)
+        fA = AlphaNmtField(self.maskA, [mappaA], masked_on_input = self.masked_on_input_A, alpha = factorA, lmax_sht = lmax)
+        fB = AlphaNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha = factorB, lmax_sht = lmax)
         return super().__call__(fA, fB)
     
 

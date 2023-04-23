@@ -16,8 +16,13 @@ def get_effective_n2(weights: np.ndarray, mask: np.ndarray, Omegapix: float) -> 
 
 
 def get_effective_n2_from_counts(workspace, coupled_shape, counts: np.ndarray, mask: np.ndarray, weights: np.ndarray = None) -> float:
+    """
+    Get the effective n2 from the counts and the mask.
+
+    For now we assume weights are all good to use. So, all inside the mask.
+    """
     
-    nside = healpy.npix2nside(len(mask))
+    #nside = healpy.npix2nside(len(mask))
     Omegapix = 4.*np.pi/len(mask)
 
     maskmean = np.mean(mask)

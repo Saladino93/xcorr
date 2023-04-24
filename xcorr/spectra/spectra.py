@@ -58,7 +58,8 @@ class CrossCorrelate(object):
 
         self.filename = filename
         if filename is not None:
-            self.load_workspace(filename)
+            print("Loading workspace from file: {}".format(filename))
+            workspace = self.load_workspace(filename)
         else:
             workspace = nmt.NmtWorkspace()
             workspace.compute_coupling_matrix(fA, fB, binning)
@@ -106,8 +107,9 @@ class CrossCorrelate(object):
         self.workspace.write_to(filename)
 
     def load_workspace(self, filename: str = None):
-        self.workspace = nmt.NmtWorkspace()
-        self.workspace.read_from(filename)
+        workspace = nmt.NmtWorkspace()
+        workspace.read_from(filename)
+        return workspace
 
 
 
@@ -115,8 +117,8 @@ class CrossCorrelate(object):
 
 
 class MapsReader(CrossCorrelate):
-    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, lmax_sht: int = -1):
-        super().__init__(maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside, lmax_sht = lmax_sht)
+    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, lmax_sht: int = -1, filename: str = None):
+        super().__init__(maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside, lmax_sht = lmax_sht, filename = filename)
 
     def __call__(self, mappaA: np.ndarray, mappaB: np.ndarray = None, factorA: float = 1, factorB: float = 1, lmax: int = -1):
         mappaB = mappaA if mappaB is None else mappaB

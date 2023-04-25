@@ -22,7 +22,7 @@ class MPIComm(object):
         self.iMax = (self.rank+1)*delta+start
 
         if self.rank == self.size-1:
-            self.iMax = Ntot
+            self.iMax = Ntot+start
 
 
         self.tasks = range(self.iMin, self.iMax)

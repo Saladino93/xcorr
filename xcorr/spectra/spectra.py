@@ -53,14 +53,14 @@ class CrossCorrelate(object):
         self.binning = binning
         self.ells = binning.get_effective_ells()
 
-        fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A, lmax_sht = lmax_sht)
-        fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B, lmax_sht = lmax_sht)
 
         self.filename = filename
         if filename is not None:
             print("Loading workspace from file: {}".format(filename))
             workspace = self.load_workspace(filename)
         else:
+            fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A, lmax_sht = lmax_sht)
+            fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B, lmax_sht = lmax_sht)
             workspace = nmt.NmtWorkspace()
             workspace.compute_coupling_matrix(fA, fB, binning)
 
@@ -73,7 +73,7 @@ class CrossCorrelate(object):
 
         self.pixwin_interp = np.interp(self.ells, np.arange(len(pixwin)), pixwin)
 
-        self.coupled_shape = nmt.compute_coupled_cell(fA, fB).shape
+        self.coupled_shape = (1, lmax_sht+1) #nmt.compute_coupled_cell(fA, fB).shape
 
 
 
@@ -110,6 +110,21 @@ class CrossCorrelate(object):
         workspace = nmt.NmtWorkspace()
         workspace.read_from(filename)
         return workspace
+    
+    
+    def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha: float = 1):
+        assert np.allclose(self.maskA, self.maskB), "The two fields must have the same mask as this is for the auto."
+        #actually not necessary to have same mask, just they have to be of type galaxy. so maybe in the future we can create a custom type.
+            
+        if mask is None:
+            mask = self.maskA
+        else:
+            try:
+                assert np.allclose(mask, self.maskA)
+            except:
+                assert np.allclose(mask, self.maskB), "Mask must be either the mask of the first field or the mask of the second field."
+                
+        return shotutils.get_effective_n2_from_counts(self.workspace, self.coupled_shape, counts, mask, weights)/alpha**2.
 
 
 
@@ -126,17 +141,3 @@ class MapsReader(CrossCorrelate):
         fB = AlphaNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha = factorB, lmax_sht = lmax)
         return super().__call__(fA, fB)
     
-
-    def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha: float = 1):
-        assert np.allclose(self.maskA, self.maskB), "The two fields must have the same mask as this is for the auto."
-        #actually not necessary to have same mask, just they have to be of type galaxy. so maybe in the future we can create a custom type.
-            
-        if mask is None:
-            mask = self.maskA
-        else:
-            try:
-                assert np.allclose(mask, self.maskA)
-            except:
-                assert np.allclose(mask, self.maskB), "Mask must be either the mask of the first field or the mask of the second field."
-                
-        return shotutils.get_effective_n2_from_counts(self.workspace, self.coupled_shape, counts, mask, weights)/alpha**2.

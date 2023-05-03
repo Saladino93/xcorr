@@ -12,6 +12,8 @@ import pickle
 
 import pathlib
 
+import scipy
+
 #import sympy as sp
 
 

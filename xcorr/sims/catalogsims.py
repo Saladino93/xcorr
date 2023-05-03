@@ -37,7 +37,7 @@ class SimCatalog(object):
         seed : int
             Seed for the random number generator.
         mask : np.ndarray
-            Binary Mask of the map.
+            Mask of the map. e.g. completeness mask.
         weights : np.ndarray
             Weights of the map.
         alpha : float
@@ -107,8 +107,10 @@ class SimCatalog(object):
 
         
         log.info("Sampling redshifts")
+        print("Sampling redshifts")
         #sample redshifts
         zs = np.hstack([catutils.sample_from_nz_pdf(z[ii], nz[ii], np.sum(number_counts_), seed = seed) for ii, number_counts_ in enumerate(number_counts)])
+        print("Done")
 
         ras = catalog[0, :]
         decs = catalog[1, :]

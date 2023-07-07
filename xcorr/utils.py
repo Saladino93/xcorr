@@ -17,6 +17,13 @@ import scipy
 #import sympy as sp
 
 
+def bin_theory(l, cl, bin_edges):
+    sums = scipy.stats.binned_statistic(l, l, statistic="sum", bins=bin_edges)
+    cl = scipy.stats.binned_statistic(l, l*cl, statistic="sum", bins=bin_edges)
+    cl = cl[0] / sums[0]
+    bin_centers = (bin_edges[1:] + bin_edges[:-1])/2
+    return bin_centers, cl
+
 
 def get_general_propagated_error(first_derivatives: np.ndarray, covariance: np.ndarray) -> np.ndarray:
     '''

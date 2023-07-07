@@ -231,7 +231,7 @@ def get_weighted_counts_from_coords(nside: int, decs: np.ndarray, ras: np.ndarra
     return counts
 
 
-def get_average_number_density_gg_per_arcmin2(counts: np.ndarray, mask: np.ndarray, completeness_map: np.ndarray, pix_area_out_arcmin2: float):
+def get_average_number_density_gg_per_arcmin2(counts: np.ndarray, mask: np.ndarray, pix_area_out_arcmin2: float):
     '''
     Returns average number density of galaxies in arcmin^{-2} 
 

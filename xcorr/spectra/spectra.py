@@ -6,6 +6,8 @@ import numpy as np
 
 from xcorr.spectra import shotutils
 
+import scipy.interpolate as sinterp
+
 
 class AlphaNmtField(nmt.NmtField):
     """
@@ -42,6 +44,7 @@ class CrossCorrelate(object):
     """
 
     def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, filename: str = None, lmax_sht: int = -1):
+        
         self.maskA = maskA
         self.maskB = maskB
 
@@ -57,7 +60,7 @@ class CrossCorrelate(object):
         self.filename = filename
         if filename is not None:
             print("Loading workspace from file: {}".format(filename))
-            workspace = self.load_workspace(filename)
+            workspace = self.load_workspace(str(filename))
         else:
             fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A, lmax_sht = lmax_sht)
             fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B, lmax_sht = lmax_sht)
@@ -111,7 +114,6 @@ class CrossCorrelate(object):
         workspace.read_from(filename)
         return workspace
     
-    
     def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha: float = 1):
         assert np.allclose(self.maskA, self.maskB), "The two fields must have the same mask as this is for the auto."
         #actually not necessary to have same mask, just they have to be of type galaxy. so maybe in the future we can create a custom type.
@@ -128,7 +130,6 @@ class CrossCorrelate(object):
 
 
 
-    
 
 
 class MapsReader(CrossCorrelate):
@@ -141,3 +142,66 @@ class MapsReader(CrossCorrelate):
         fB = AlphaNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha = factorB, lmax_sht = lmax)
         return super().__call__(fA, fB)
     
+
+
+class CrossCorrelateCorrected(object):
+    """
+    Class to compute power spectra while accounting for multiplicative corrections.
+    """
+
+    def __init__(self, ells_correction, correction, **kwargs):
+        super().__init__(**kwargs)
+        self.ells_correction = ells_correction
+        self.correction = correction
+
+        correction_function = sinterp.interp1d(ells_correction, correction, bounds_error = False, fill_value = 0)
+        self.correction_function = correction_function
+
+    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
+        result = super().__call__(fA, fB)
+        ells = self.ells
+        correction = self.correction_function(ells)
+        return result/correction
+
+
+class CrossCorrelateCorrectedGalaxy(object):
+    """
+    Class to compute power spectra while accounting for multiplicative corrections.
+    Here, first we subtract an estimated shot noise from the power spectrum, then we apply the correction.
+    """
+
+    def __init__(self, correction_function, **kwargs):
+        super().__init__(**kwargs)
+        self.correction_function = correction_function
+
+    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
+        result = super().__call__(fA, fB)
+        ells = self.ells
+        correction = self.correction_function(ells)
+        shot = 0.
+        result -= shot
+        return result/correction
+    
+
+
+
+class SpectraReader(object):
+    """
+    Class to compute power spectra while accounting for multiplicative corrections.
+    """
+
+    def __init__(self, ells_correction, correction, binning):
+
+        self.binning = binning
+        self.ells = binning.get_effective_ells()
+
+        self.ells_correction = ells_correction
+        self.correction = correction
+
+        correction_function = sinterp.interp1d(ells_correction, correction, bounds_error = False, fill_value = 0)
+        self.correction_function = correction_function
+
+    def __call__(self, spectrum: np.ndarray):
+        ells = self.ells
+        correction = self.correction_function(ells)
+        return spectrum/correction

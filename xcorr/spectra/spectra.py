@@ -43,7 +43,7 @@ class CrossCorrelate(object):
         Scaling factor for the input maps. This is for gaussian deltag simulations with an alpha factor to Poisson populate the maps.
     """
 
-    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, filename: str = None, lmax_sht: int = -1):
+    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, filename: str = None, lmax_sht: int = -1, lmax_binning: int = -1):
         
         self.maskA = maskA
         self.maskB = maskB
@@ -56,27 +56,29 @@ class CrossCorrelate(object):
         self.binning = binning
         self.ells = binning.get_effective_ells()
 
+        self.lmax_binning = lmax_binning
+
 
         self.filename = filename
         if filename is not None:
             print("Loading workspace from file: {}".format(filename))
             workspace = self.load_workspace(str(filename))
+            self.workspace = workspace
         else:
             fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A, lmax_sht = lmax_sht)
             fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B, lmax_sht = lmax_sht)
-            workspace = nmt.NmtWorkspace()
-            workspace.compute_coupling_matrix(fA, fB, binning)
+            self.workspace = nmt.NmtWorkspace()
+            self.workspace.compute_coupling_matrix(fA, fB, binning)
+            self.save_workspace(filename)
 
-        self.workspace = workspace
-
-        lmaxpix = min(3 * nside - 1, lmax_sht)
+        lmaxpix = lmax_binning #min(3 * nside - 1, lmax_sht)
         pixwin = hp.pixwin(nside)[:lmaxpix+1]
-        M = workspace.get_bandpower_windows()[0, :, 0, :]
+        M = self.workspace.get_bandpower_windows()[0, :, 0, :]
         self._pixwin = np.dot(M, pixwin)
 
         self.pixwin_interp = np.interp(self.ells, np.arange(len(pixwin)), pixwin)
 
-        self.coupled_shape = (1, lmax_sht+1) #nmt.compute_coupled_cell(fA, fB).shape
+        self.coupled_shape = (1, lmax_binning+1) #lmax_sht+1) #nmt.compute_coupled_cell(fA, fB).shape
 
 
 
@@ -107,7 +109,8 @@ class CrossCorrelate(object):
     
     def save_workspace(self, filename: str = None):
         filename = self.filename if filename is None else filename
-        self.workspace.write_to(filename)
+        print("Saving workspace to file: {}".format(filename))
+        self.workspace.write_to(str(filename))
 
     def load_workspace(self, filename: str = None):
         workspace = nmt.NmtWorkspace()
@@ -182,8 +185,6 @@ class CrossCorrelateCorrectedGalaxy(object):
         result -= shot
         return result/correction
     
-
-
 
 class SpectraReader(object):
     """

@@ -42,7 +42,9 @@ class ConditionedSims(object):
         """
 
         #call this to generate a random seed for each realization
-        rng = np.random.default_rng(seed = seed)
+        #np.random.RandomState
+        #rng = np.random.default_rng(seed = seed)
+        np.random.seed(seed = seed)
 
         correlated_alms = self.get_correlated_part(input_alms, self.filter_correlated)
 

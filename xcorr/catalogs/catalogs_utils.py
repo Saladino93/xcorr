@@ -109,7 +109,12 @@ def get_nz_from_catalog(catalog_keys: dict, filename: str, zmin: float, zmax: fl
     selector = get_selector_from_array_values(bottom = zmin, top = zmax, all_values = all_values_of_reference)
 
     all_values_of_reference = catalog[catalog_keys[windowkey]]
-    weights = catalog[catalog_keys[weightskey]]
+    try:
+        weights = catalog[catalog_keys[weightskey]]
+    except:
+        print("Setting unit weights!!")
+        weights = np.ones_like(all_values_of_reference)
+
     data = np.c_[all_values_of_reference, weights]
 
     data = selector(data)

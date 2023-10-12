@@ -105,7 +105,7 @@ class Catalog(DataCatalogMapper):
         self.mask = mask
 
 
-    def get_map_counts_at_redshifts(self, nside: int = 512, bottom_z: float = None, top_z: float = None, subsamples_number: int = 1):
+    def get_map_counts_at_redshifts(self, nside: int = 512, bottom_z: float = None, top_z: float = None, subsamples_number: int = 1, ras_shift: float = 0., dec_shift: float = 0.):
         '''
 
         When some redshift is none, assume maximum or minimum redshift of the whole catalog.
@@ -124,7 +124,7 @@ class Catalog(DataCatalogMapper):
         decs = selector(self.decs)
         ras = selector(self.ras)
         weights = selector(self.weights)
-        return catalogs_utils.get_weighted_counts_from_coords(nside = nside, decs = decs, ras = ras,
+        return catalogs_utils.get_weighted_counts_from_coords(nside = nside, decs = decs+dec_shift, ras = ras+ras_shift,
                                                     weights = weights, subsamples_number = subsamples_number)
         
     @staticmethod

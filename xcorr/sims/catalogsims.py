@@ -58,7 +58,14 @@ class SimCatalog(object):
         Npix = np.sum(mask) #len(mappa[mask != 0])
         Ngal = mappa*No_observed/Npix
         #Ngal = hp.alm2map(hp.map2alm(Ngal, pol = False, use_pixel_weights = True), nside, pixwin = True)#NOTE: PIXWIN
-        Ngal = np.nan_to_num(Ngal)*mask*np.nan_to_num(1/weights)/alpha**2.
+        #assume mask map is "inside" the weights map 
+        if type(weights) is np.ndarray:
+            inverse_weights = weights.copy()
+            inverse_weights[weights != 0] = 1./weights[weights != 0]
+        else:
+            inverse_weights = 1./weights
+
+        Ngal = np.nan_to_num(Ngal)*mask*inverse_weights/alpha**2.
 
         if alpha == 1:
             Ngal[np.where(Ngal < 0.)] = 0. #setting to -1 the delta_g_input_real
@@ -85,14 +92,14 @@ class SimCatalog(object):
         return [self._delta_g_to_number_counts(No, delta_g, seed, mask, weight, alpha) for No, delta_g, weight in zip(No_observed, delta_g_input_real, weights)]
     
 
-    def save_catalog(self, filename: str, seed: int, No_observed: int, delta_g_input_real: np.ndarray, mask: np.ndarray, weights: np.ndarray, alpha: float, z: np.ndarray, nz: np.ndarray, columnsnames: list = ['RA', 'DEC', 'Z', 'ZBIN', 'WEIGHT']):
-        number_counts = self.delta_g_to_number_counts(seed, No_observed, delta_g_input_real, mask, weights, alpha)
+    def save_catalog(self, filename: str, seed: int, No_observed: int, delta_g_input_real: np.ndarray, mask: np.ndarray, weight_maps: np.ndarray, alpha: float, z: np.ndarray, nz: np.ndarray, columnsnames: list = ['RA', 'DEC', 'Z', 'ZBIN', 'WEIGHT']):
+        number_counts = self.delta_g_to_number_counts(seed, No_observed, delta_g_input_real, mask, weight_maps, alpha)
         Npix = len(mask)
-        catutils.save_catalog(filename = self.directory/f'{filename}.fits', columnsnames = columnsnames, columns = self._get_catalog(seed, Npix, self.nside, number_counts, z, nz))
+        catutils.save_catalog(filename = self.directory/f'{filename}.fits', columnsnames = columnsnames, columns = self._get_catalog(seed, Npix, self.nside, number_counts, z, nz, weight_maps))
         return number_counts
 
     @staticmethod
-    def _get_catalog(seed: int, Npix: int, nside: int, number_counts: np.ndarray, z: np.ndarray, nz: np.ndarray):
+    def _get_catalog(seed: int, Npix: int, nside: int, number_counts: np.ndarray, z: np.ndarray, nz: np.ndarray, weights_maps: np.ndarray):
         ipix = np.arange(0, Npix)
         ras, decs = hp.pixelfunc.pix2ang(nside, ipix, lonlat = True)
         coords = np.vstack((ras, decs))
@@ -109,7 +116,7 @@ class SimCatalog(object):
         log.info("Sampling redshifts")
         print("Sampling redshifts")
         #sample redshifts
-        zs = np.hstack([catutils.sample_from_nz_pdf(z[ii], nz[ii], np.sum(number_counts_), seed = seed) for ii, number_counts_ in enumerate(number_counts)])
+        zs = np.hstack([catutils.sample_from_nz_pdf(z[ii], nz[ii], np.sum(number_counts_), seed = seed, zconst = ii) for ii, number_counts_ in enumerate(number_counts)])
         print("Done")
 
         ras = catalog[0, :]
@@ -128,7 +135,7 @@ class SimCatalog(object):
         else:
         """
 
-        weights_maps = [np.ones(Npix) for _ in range(len(number_counts))]
+        #weights_maps = [np.ones(Npix) for _ in range(len(number_counts))]
 
         fake_weights = np.concatenate([np.repeat(weights, number_counts_.astype(int), axis = -1) for weights, number_counts_ in zip(weights_maps, number_counts)])
 

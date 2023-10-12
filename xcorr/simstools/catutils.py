@@ -80,14 +80,17 @@ def _sample_from_function(pdff, pdffmax, Nitems, xmin, xmax, seed: int):
     return items
 
 
-def sample_from_nz_pdf(z, dndz, Nitems, zmin = None, zmax = None, seed: int = None):
+def sample_from_nz_pdf(z, dndz, Nitems, zmin = None, zmax = None, seed: int = None, zconst = None):
     print("Nitems", Nitems)
-    #pdff = get_interp(z, dndz/np.trapz(dndz, z)) 
-    pdff = sinterp.interp1d(z, dndz/np.trapz(dndz, z), kind = 'cubic')
-    pdffmax = np.max(pdff(z))
-    zmin = z.min() if zmin is None else zmin
-    zmax = z.max() if zmax is None else zmax
-    return sample_from_function(pdff, pdffmax, Nitems, zmin, zmax, seed)
+    if zconst is not None:
+        return np.full(Nitems, z[zconst])
+    else:
+        #pdff = get_interp(z, dndz/np.trapz(dndz, z)) 
+        pdff = sinterp.interp1d(z, dndz/np.trapz(dndz, z), kind = 'cubic')
+        pdffmax = np.max(pdff(z))
+        zmin = z.min() if zmin is None else zmin
+        zmax = z.max() if zmax is None else zmax
+        return sample_from_function(pdff, pdffmax, Nitems, zmin, zmax, seed)
 
 
 

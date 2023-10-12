@@ -4,6 +4,8 @@ Generates conditioned Gaussian simulations from a given map, and power spectra.
 
 import numpy as np
 
+from plancklens import shts
+
 import healpy as hp
 
 from typing import Callable, List, Tuple
@@ -45,7 +47,6 @@ class ConditionedSims(object):
         #np.random.RandomState
         #rng = np.random.default_rng(seed = seed)
         np.random.seed(seed = seed)
-
         correlated_alms = self.get_correlated_part(input_alms, self.filter_correlated)
 
         uncorrelated_alms = self.get_uncorrelated_part(input_alms, self.filter_uncorrelated)
@@ -102,7 +103,7 @@ class ConditionedSims(object):
         filter_correlated, uncorrelated : list, list
             List of the filtered and unfiltered power spectra.
         """
-
+        
         clsfields = [get_AB(i, j) for i, j in zip(indices[0], indices[1])]
         clsfieldscross = [get_AB(i, fixed_index) for i in range(Nfields)]
 

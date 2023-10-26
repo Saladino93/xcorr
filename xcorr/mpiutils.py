@@ -6,10 +6,11 @@ class MPIComm(object):
 
             from mpi4py import MPI
 
-            comm = MPI.COMM_WORLD
-            self.rank = comm.Get_rank()
-            self.size = comm.Get_size()
+            self.comm = MPI.COMM_WORLD
+            self.rank = self.comm.Get_rank()
+            self.size = self.comm.Get_size()
         else:
+            self.comm = None
             self.size = 1
             self.rank = 0
 

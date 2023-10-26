@@ -83,7 +83,7 @@ def _sample_from_function(pdff, pdffmax, Nitems, xmin, xmax, seed: int):
 def sample_from_nz_pdf(z, dndz, Nitems, zmin = None, zmax = None, seed: int = None, zconst = None):
     print("Nitems", Nitems)
     if zconst is not None:
-        return np.full(Nitems, z[zconst])
+        return np.full(Nitems, zconst)
     else:
         #pdff = get_interp(z, dndz/np.trapz(dndz, z)) 
         pdff = sinterp.interp1d(z, dndz/np.trapz(dndz, z), kind = 'cubic')

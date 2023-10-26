@@ -11,7 +11,7 @@ import healpy as hp
 from typing import Callable, List, Tuple
 
 from . import utils
-
+from xcorr import utils as xcorru
 
 
 class ConditionedSims(object):
@@ -35,10 +35,9 @@ class ConditionedSims(object):
         self.get_AB = get_AB
         indices = utils.get_indices_for_cls_list(Nfields) #indices for the extra Nfields
 
-        self.filter_correlated, self.filter_uncorrelated = self.procesess_cls_list(Nfields, indices, get_AB, realized_field_index)
+        self.filter_correlated, self.filter_uncorrelated, self.gg_parts = self.procesess_cls_list(Nfields, indices, get_AB, realized_field_index)
 
-
-    def generate_alm(self, seed: int, input_alms: np.ndarray):
+    def generate_alm(self, seed: int, input_alms: np.ndarray, nside: int = None):
         """
         Generates the conditioned Gaussian simulations.
         """
@@ -49,18 +48,27 @@ class ConditionedSims(object):
         np.random.seed(seed = seed)
         correlated_alms = self.get_correlated_part(input_alms, self.filter_correlated)
 
-        uncorrelated_alms = self.get_uncorrelated_part(input_alms, self.filter_uncorrelated)
+        uncorrelated_alms = self.get_uncorrelated_part(input_alms, self.filter_uncorrelated, nside, self.gg_parts)
 
+        correlated_alms = correlated_alms if nside is None else xcorru.list_alm_copy(uncorrelated_alms, hp.Alm.getlmax(uncorrelated_alms[0].size), 3*nside-1, 3*nside-1)
         total_alms = [np.nan_to_num(u+c) for u, c in zip(uncorrelated_alms, correlated_alms)]
 
         return total_alms
     
-    def generate_maps(self, seed:int, input_alms: np.ndarray, nside: int):
-        total_alms = self.generate_alm(seed, input_alms)
+    def generate_maps(self, seed:int, input_alms: np.ndarray, nside: int, cast_to_nside_lmax: False):
+        """
+        The input_alms might have a lower lmax compared to the required lmax from nside (3*nside-1). 
+        In some cases, e.g. cov matrix from Namaster, it might be useful to copy the input_alms to 
+        have same lmax from nside.
+
+        Note, by construction, only the uncorrelated part will have non-zero modes beyond the correlated
+        part defined by input_alms.
+        """
+        total_alms = self.generate_alm(seed, input_alms, nside = nside if cast_to_nside_lmax else None)
         alm2map = lambda alm: hp.alm2map(alm, nside)
         maps = list(map(alm2map, total_alms))
         return maps
-    
+
 
     def get_correlated_part(self, input_alms: np.ndarray, filters: list) -> List[np.ndarray]:
         '''
@@ -69,12 +77,20 @@ class ConditionedSims(object):
         correlated_alms = [hp.sphtfunc.almxfl(input_alms, filter_) for filter_ in filters]
         return correlated_alms
 
-    def get_uncorrelated_part(self, input_alms: np.ndarray, uncorr_cov_part: list) -> np.ndarray:
+    def get_uncorrelated_part(self, input_alms: np.ndarray, uncorr_cov_part: list, nside: int = None, gg_parts: list = None) -> np.ndarray:
         '''
         uncorr_cov_part = $\Sigma_g = \Sigma_{{g_\mathrm{i}}{g_\mathrm{j}}}-\frac{\vec{C}^{\kappa g}\vec{C}^{\kappa g,T}}{C^{\kappa\kappa}}$
         '''
         lmax = hp.Alm.getlmax(input_alms.size)
         uncorrelated_alms = hp.sphtfunc.synalm(uncorr_cov_part, lmax = lmax, new = True)
+
+        if nside is not None:
+            lmax_n = 3*nside-1
+            ls = np.arange(lmax_n+1)
+            filter_alm = ls>lmax
+            new_uncorrelated_alm = hp.sphtfunc.synalm(gg_parts, lmax = lmax_n, new = True)
+            [hp.almxfl(new_u, filter_alm, inplace = True) for new_u in new_uncorrelated_alm]
+            uncorrelated_alms = [ualms+newualms for ualms, newualms in zip(xcorru.list_alm_copy(uncorrelated_alms, lmax, lmax_n, lmax_n), new_uncorrelated_alm)]
         return uncorrelated_alms
 
 
@@ -122,5 +138,5 @@ class ConditionedSims(object):
         covij = np.array(clsfields)
         uncorrelated = covij-matrix 
 
-        return filter_correlated, uncorrelated
+        return filter_correlated, uncorrelated, clsfields
 

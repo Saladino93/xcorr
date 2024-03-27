@@ -1,6 +1,6 @@
 
 class MPIComm(object):
-    def __init__(self, start, Ntot, do_mpi):
+    def __init__(self, start, Ntot, do_mpi, tasks: list = None):
 
         if do_mpi:
 
@@ -14,10 +14,13 @@ class MPIComm(object):
             self.size = 1
             self.rank = 0
 
+        if tasks is not None:
+            Ntot = len(tasks)
+            start = 0
+
+        delta = int(Ntot/self.size)
 
         self.Ntot = Ntot
-        
-        delta = int(Ntot/self.size)
 
         self.iMin = self.rank*delta+start
         self.iMax = (self.rank+1)*delta+start
@@ -25,5 +28,5 @@ class MPIComm(object):
         if self.rank == self.size-1:
             self.iMax = Ntot+start
 
+        self.tasks = range(self.iMin, self.iMax) if tasks is None else tasks[self.iMin:self.iMax]
 
-        self.tasks = range(self.iMin, self.iMax)

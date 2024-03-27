@@ -1,4 +1,10 @@
 import itertools
+import numpy as np
+
+
+
+def divide(a, b):
+    return np.divide(a, b, out = np.zeros(a.shape, dtype = float), where = b!= 0)
 
 
 def get_indices_for_cls_list(N: int):

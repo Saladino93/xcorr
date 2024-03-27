@@ -75,6 +75,7 @@ class CrossCorrelate(object):
         pixwin = hp.pixwin(nside)[:lmaxpix+1]
         M = self.workspace.get_bandpower_windows()[0, :, 0, :]
         self._pixwin = np.dot(M, pixwin)
+        self.M = M
 
         self.pixwin_interp = np.interp(self.ells, np.arange(len(pixwin)), pixwin)
 
@@ -117,7 +118,7 @@ class CrossCorrelate(object):
         workspace.read_from(filename)
         return workspace
     
-    def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha: float = 1):
+    def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha: float = 1, weights_sq: np.ndarray = None):
         assert np.allclose(self.maskA, self.maskB), "The two fields must have the same mask as this is for the auto."
         #actually not necessary to have same mask, just they have to be of type galaxy. so maybe in the future we can create a custom type.
             
@@ -129,7 +130,7 @@ class CrossCorrelate(object):
             except:
                 assert np.allclose(mask, self.maskB), "Mask must be either the mask of the first field or the mask of the second field."
                 
-        return shotutils.get_effective_n2_from_counts(self.workspace, self.coupled_shape, counts, mask, weights)/alpha**2.
+        return shotutils.get_effective_n2_from_counts(self.workspace, self.coupled_shape, counts, mask, weights, weights_sq)/alpha**2.
 
 
 

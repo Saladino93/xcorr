@@ -78,10 +78,13 @@ def save_catalog(filename: str, columnsnames: list, columns: list, overwrite: bo
 
 def get_nz(redshifts: np.ndarray, weights: np.ndarray = None, nbins: int = 20) -> Tuple[np.ndarray, np.ndarray]:
 
-    galaxyzbins = np.linspace(redshifts.min(), redshifts.max())
+    if type(nbins) == int:
+        bins = nbins
+    else:
+        bins = nbins
     #CREATE dn/dz
     #histog = np.histogram(redshifts, galaxyzbins, weights = weights)
-    histog = np.histogram(redshifts, weights = weights, bins = nbins, density = None)
+    histog = np.histogram(redshifts, weights = weights, bins = bins, density = None)
     z, nz = histog[1], histog[0]
     z = (z[1:]+z[:-1])/2.
     return z, nz

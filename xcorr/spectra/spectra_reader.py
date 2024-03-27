@@ -5,18 +5,19 @@ Utility to easily read data, sims results in one way.
 import numpy as np
 import pathlib
 import healpy as hp
-
+import pymaster as nmt
 
 class ReadSpectra(object):
 
-    def __init__(self, mc_correction: callable = None, mask_correction: callable = None, include_shot: bool = False, filename:str = None, nside: int = 2048, lmax_binning: int = 4000):
+    def __init__(self, filename:str = None, nside: int = 2048, lmax_binning: int = 4000, nlb: float = 50,
+                 mc_correction = None, mask_correction = None):
         #self.spectra_path = pathlib.Path(spectra_path)
-        self.include_shot = include_shot
-        self.mc_correction = mc_correction
-        self.mask_correction = mask_correction
-        pixwin = hp.pixwin(nside)[:lmaxpix+1]
+        lmaxpix = 3*nside-1
+        pixwin = hp.pixwin(nside)[:lmax_binning+1]
 
-        self.filename = filename
+        binning = nmt.NmtBin.from_lmax_linear(lmax_binning, nlb)
+
+        self.ells = binning.get_effective_ells()
         if filename is not None:
             print("Loading workspace from file: {}".format(filename))
             workspace = self.load_workspace(str(filename))
@@ -25,13 +26,32 @@ class ReadSpectra(object):
             self._pixwin = np.dot(M, pixwin)
             self.coupled_shape = (1, lmax_binning+1)
 
+        self.mc_correction = mc_correction
+        self.mask_correction = mask_correction
+
+    @staticmethod
+    def load_workspace(filename: str = ""):
+        workspace = nmt.NmtWorkspace()
+        workspace.read_from(filename)
+        return workspace
+
     @staticmethod
     def _load(file:str):
         return np.loadtxt(file)
 
-    def __call__(self, file:str):
+    def __call__(self, cls):
 
-        data = self._load(file).T
+        cls_corrected = cls
+
+        if self.mc_correction is not None:
+            cls_corrected = cls*self.mc_correction
+
+        if self.mask_correction is not None:
+            cls_corrected = cls_corrected*self.mask_correction
+
+        return cls_corrected
+
+        """data = self._load(file).T
         
         if self.include_shot:
             ells, cl, shot, pixwin, pixwin_interp = data
@@ -46,7 +66,7 @@ class ReadSpectra(object):
         self.cl *= self.mc_correction(ells) if self.mc_correction is not None else 1.
         self.cl *= self.mask_correction(ells) if self.mask_correction is not None else 1.
             
-        return self.ells, self.cl, self.pixwin, self.pixwin_interp
+        return self.ells, self.cl, self.pixwin, self.pixwin_interp"""
         
 
     def couple_cell(self, cl_decoupled: np.ndarray):

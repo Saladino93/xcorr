@@ -145,7 +145,6 @@ class Catalog(DataCatalogMapper):
         pix_area_out_arcmin2 = pix_area_out*(60)**2.
 
         effective_counts = self.get_effective_counts(counts = counts, completeness_map = completeness_map, pix_area_out_arcmin2 = pix_area_out_arcmin2)
-
         mean_counts = self.masked_mean(counts)/pix_area_out_arcmin2
 
         density_contrast = effective_counts/mean_counts - 1.

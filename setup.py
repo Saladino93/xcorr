@@ -7,7 +7,7 @@ setup(
     description = "Code for cosmological cross-correlation analyses",
     url = "https://github.com/Saladino93/xcorr",
     author = "Omar Darwish",
-    author_email = "omar.darwish@protonmail.com",
+    author_email = "o.darwish@protonmail.com",
     packages = ["xcorr"],
     install_requires = ["numpy"]
 )

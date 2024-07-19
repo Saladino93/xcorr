@@ -82,8 +82,9 @@ class SimCatalog(object):
 
     @staticmethod
     def poisson_sampling(counts_map: int, seed: int):
-        rng = np.random.default_rng(seed = seed)
-        return rng.poisson(lam = counts_map)
+        #rng = np.random.default_rng(seed = seed)
+        np.random.seed(seed)
+        return np.random.poisson(lam = counts_map)
     
     
     def create_field_with_systematics(self, Ngal: np.ndarray, weight_map: np.ndarray, seed: int) -> np.ndarray:

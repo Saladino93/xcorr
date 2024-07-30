@@ -8,6 +8,8 @@ from xcorr.spectra import shotutils
 
 import scipy.interpolate as sinterp
 
+import pathlib
+
 
 class AlphaNmtField(nmt.NmtField):
     """
@@ -60,11 +62,13 @@ class CrossCorrelate(object):
 
 
         self.filename = filename
-        if filename is not None:
+        file_exists = filename is not None and pathlib.Path(filename).exists()
+        if (filename is not None) and file_exists:
             print("Loading workspace from file: {}".format(filename))
             workspace = self.load_workspace(str(filename))
             self.workspace = workspace
         else:
+            print("Computing workspace.")
             fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A, lmax_sht = lmax_sht)
             fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B, lmax_sht = lmax_sht)
             self.workspace = nmt.NmtWorkspace()

@@ -13,13 +13,13 @@ import pathlib
 
 class AlphaNmtField(nmt.NmtField):
     """
-    Convinience class to add an alpha multiplicative factor of the input maps.
+    Convinience class to add an alpha_factor multiplicative factor of the input maps.
 
     Useful when simulating rescaled gaussian delta_g maps and Poisson populating them.
     """
-    def __init__(self, mask, maps, masked_on_input, alpha: float = 1., **kwargs):
+    def __init__(self, mask, maps, masked_on_input, alpha_factor: float = 1., **kwargs):
         super().__init__(mask = mask, maps = maps, masked_on_input = masked_on_input, **kwargs)
-        self.alpha = alpha
+        self.alpha_factor = alpha_factor
 
 
 
@@ -41,11 +41,11 @@ class CrossCorrelate(object):
         Binning scheme to use.
     nside: int
         Nside of the maps.
-    alpha: float
-        Scaling factor for the input maps. This is for gaussian deltag simulations with an alpha factor to Poisson populate the maps.
+    alpha_factor: float
+        Scaling factor for the input maps. This is for gaussian deltag simulations with an alpha_factor factor to Poisson populate the maps.
     """
 
-    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, filename: str = None, lmax_sht: int = -1, lmax_binning: int = -1):
+    def __init__(self, maskA, maskB, masked_on_input_A, masked_on_input_B, binning, nside: int, filename: str = None, lmax_sht: int = -1, lmax_binning: int = -1, spin_A: int = 0, spin_B: int = 0):
         
         self.maskA = maskA
         self.maskB = maskB
@@ -69,13 +69,15 @@ class CrossCorrelate(object):
             self.workspace = workspace
         else:
             print("Computing workspace.")
-            fA = nmt.NmtField(maskA, [np.zeros_like(maskA)], masked_on_input = masked_on_input_A, lmax_sht = lmax_sht)
-            fB = nmt.NmtField(maskB, [np.zeros_like(maskB)], masked_on_input = masked_on_input_B, lmax_sht = lmax_sht)
+            fA = nmt.NmtField(maskA, None, masked_on_input = masked_on_input_A, lmax = lmax_sht, spin = spin_A)
+            fB = nmt.NmtField(maskB, None, masked_on_input = masked_on_input_B, lmax = lmax_sht, spin = spin_B)
+            self.mask_field_A = fA
+            self.mask_field_B = fB
             self.workspace = nmt.NmtWorkspace()
             self.workspace.compute_coupling_matrix(fA, fB, binning)
             self.save_workspace(filename)
 
-        lmaxpix = lmax_binning #min(3 * nside - 1, lmax_sht)
+        lmaxpix = lmax_binning
         pixwin = hp.pixwin(nside)[:lmaxpix+1]
         M = self.workspace.get_bandpower_windows()[0, :, 0, :]
         self._pixwin = np.dot(M, pixwin)
@@ -86,10 +88,9 @@ class CrossCorrelate(object):
         self.coupled_shape = (1, lmax_binning+1) #lmax_sht+1) #nmt.compute_coupled_cell(fA, fB).shape
 
 
-
-    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
+    def __call__(self, fA: alpha_factorNmtField, fB: alpha_factorNmtField = None):
         fB = fA if fB is None else fB
-        factor = fA.alpha * fB.alpha
+        factor = fA.alpha_factor * fB.alpha_factor
         cl_coupled = nmt.compute_coupled_cell(fA, fB)
         cl_decoupled = self.workspace.decouple_cell(cl_coupled)
         return cl_decoupled[0]/factor
@@ -122,7 +123,7 @@ class CrossCorrelate(object):
         workspace.read_from(filename)
         return workspace
     
-    def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha: float = 1, weights_sq: np.ndarray = None):
+    def get_effective_n2_from_counts(self, counts: np.ndarray, mask: np.ndarray = None, weights: np.ndarray = None, alpha_factor: float = 1, weights_sq: np.ndarray = None):
         assert np.allclose(self.maskA, self.maskB), "The two fields must have the same mask as this is for the auto."
         #actually not necessary to have same mask, just they have to be of type galaxy. so maybe in the future we can create a custom type.
             
@@ -134,7 +135,7 @@ class CrossCorrelate(object):
             except:
                 assert np.allclose(mask, self.maskB), "Mask must be either the mask of the first field or the mask of the second field."
                 
-        return shotutils.get_effective_n2_from_counts(self.workspace, self.coupled_shape, counts, mask, weights, weights_sq)/alpha**2.
+        return shotutils.get_effective_n2_from_counts(self.workspace, self.coupled_shape, counts, mask, weights, weights_sq)/alpha_factor**2.
 
 
 
@@ -146,8 +147,8 @@ class MapsReader(CrossCorrelate):
 
     def __call__(self, mappaA: np.ndarray, mappaB: np.ndarray = None, factorA: float = 1, factorB: float = 1, lmax: int = -1):
         mappaB = mappaA if mappaB is None else mappaB
-        fA = AlphaNmtField(self.maskA, [mappaA], masked_on_input = self.masked_on_input_A, alpha = factorA, lmax_sht = lmax)
-        fB = AlphaNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha = factorB, lmax_sht = lmax)
+        fA = alpha_factorNmtField(self.maskA, [mappaA], masked_on_input = self.masked_on_input_A, alpha_factor = factorA, lmax_sht = lmax)
+        fB = alpha_factorNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha_factor = factorB, lmax_sht = lmax)
         return super().__call__(fA, fB)
     
 
@@ -165,7 +166,7 @@ class CrossCorrelateCorrected(object):
         correction_function = sinterp.interp1d(ells_correction, correction, bounds_error = False, fill_value = 0)
         self.correction_function = correction_function
 
-    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
+    def __call__(self, fA: alpha_factorNmtField, fB: alpha_factorNmtField = None):
         result = super().__call__(fA, fB)
         ells = self.ells
         correction = self.correction_function(ells)
@@ -182,7 +183,7 @@ class CrossCorrelateCorrectedGalaxy(object):
         super().__init__(**kwargs)
         self.correction_function = correction_function
 
-    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
+    def __call__(self, fA: alpha_factorNmtField, fB: alpha_factorNmtField = None):
         result = super().__call__(fA, fB)
         ells = self.ells
         correction = self.correction_function(ells)

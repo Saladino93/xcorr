@@ -53,12 +53,12 @@ class ConditionedSims(object):
         Generates the conditioned Gaussian simulations.
         """
 
-        #call this to generate a random seed for each realization
+        #call this to generate a random seed for each realization of the uncorrelated part
         #np.random.RandomState
         #rng = np.random.default_rng(seed = seed)
         np.random.seed(seed = seed+seed_shift)
-        correlated_alms = self.get_correlated_part(input_alms, self.filter_correlated)
 
+        correlated_alms = self.get_correlated_part(input_alms, self.filter_correlated)
         uncorrelated_alms = self.get_uncorrelated_part(input_alms, self.filter_uncorrelated, nside, self.gg_parts)
 
         lmax_input = hp.Alm.getlmax(input_alms.size)
@@ -74,7 +74,7 @@ class ConditionedSims(object):
         return [hp.sphtfunc.almxfl(alm, filter) for alm in alms]
 
     
-    def generate_maps(self, seed:int, input_alms: np.ndarray, nside: int, cast_to_nside_lmax: False):
+    def generate_maps(self, seed:int, input_alms: np.ndarray, nside: int, cast_to_nside_lmax: False, seed_shift: int = 0):
         """
         The input_alms might have a lower lmax compared to the required lmax from nside (3*nside-1). 
         In some cases, e.g. cov matrix from Namaster, it might be useful to copy the input_alms to 
@@ -83,7 +83,7 @@ class ConditionedSims(object):
         Note, by construction, only the uncorrelated part will have non-zero modes beyond the correlated
         part defined by input_alms.
         """
-        total_alms = self.generate_alm(seed, input_alms, nside = nside if cast_to_nside_lmax else None)
+        total_alms = self.generate_alm(seed, input_alms, nside = nside if cast_to_nside_lmax else None, seed_shift = seed_shift)
         alm2map = lambda alm: self.alm2map(alm, nside)
         maps = list(map(alm2map, total_alms))
         return maps

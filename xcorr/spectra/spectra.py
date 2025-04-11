@@ -88,7 +88,7 @@ class CrossCorrelate(object):
         self.coupled_shape = (1, lmax_binning+1) #lmax_sht+1) #nmt.compute_coupled_cell(fA, fB).shape
 
 
-    def __call__(self, fA: alpha_factorNmtField, fB: alpha_factorNmtField = None):
+    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
         fB = fA if fB is None else fB
         factor = fA.alpha_factor * fB.alpha_factor
         cl_coupled = nmt.compute_coupled_cell(fA, fB)
@@ -147,8 +147,8 @@ class MapsReader(CrossCorrelate):
 
     def __call__(self, mappaA: np.ndarray, mappaB: np.ndarray = None, factorA: float = 1, factorB: float = 1, lmax: int = -1):
         mappaB = mappaA if mappaB is None else mappaB
-        fA = alpha_factorNmtField(self.maskA, [mappaA], masked_on_input = self.masked_on_input_A, alpha_factor = factorA, lmax_sht = lmax)
-        fB = alpha_factorNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha_factor = factorB, lmax_sht = lmax)
+        fA = AlphaNmtField(self.maskA, [mappaA], masked_on_input = self.masked_on_input_A, alpha_factor = factorA, lmax_sht = lmax)
+        fB = AlphaNmtField(self.maskB, [mappaB], masked_on_input = self.masked_on_input_B, alpha_factor = factorB, lmax_sht = lmax)
         return super().__call__(fA, fB)
     
 
@@ -166,7 +166,7 @@ class CrossCorrelateCorrected(object):
         correction_function = sinterp.interp1d(ells_correction, correction, bounds_error = False, fill_value = 0)
         self.correction_function = correction_function
 
-    def __call__(self, fA: alpha_factorNmtField, fB: alpha_factorNmtField = None):
+    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
         result = super().__call__(fA, fB)
         ells = self.ells
         correction = self.correction_function(ells)
@@ -183,7 +183,7 @@ class CrossCorrelateCorrectedGalaxy(object):
         super().__init__(**kwargs)
         self.correction_function = correction_function
 
-    def __call__(self, fA: alpha_factorNmtField, fB: alpha_factorNmtField = None):
+    def __call__(self, fA: AlphaNmtField, fB: AlphaNmtField = None):
         result = super().__call__(fA, fB)
         ells = self.ells
         correction = self.correction_function(ells)

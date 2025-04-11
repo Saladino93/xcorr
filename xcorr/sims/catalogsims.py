@@ -24,7 +24,8 @@ class SimCatalog(object):
         else:
             return False
 
-    def _delta_g_to_number_counts(self, No_observed, delta_g_input_real, seed, mask, weights, alpha, alpha_delta: float = 1., cross_check_negative: bool = True):
+    @staticmethod
+    def _delta_g_to_number_counts(poisson_sampling_function, No_observed, delta_g_input_real, seed, mask, weights, alpha, alpha_delta: float = 1., cross_check_negative: bool = True):
         '''
         This function transforms a delta_g map to a number counts map. For alpha < 1 see https://arxiv.org/pdf/1708.01536.pdf
 
@@ -77,8 +78,8 @@ class SimCatalog(object):
         
         if alpha == 1:
             Ngal[np.where(Ngal < 0.)] = 0. #setting to -1 the delta_g_input_real
-            
-        return (self.poisson_sampling(Ngal, seed)).astype(int)
+
+        return poisson_sampling_function(Ngal, seed).astype(int)
 
     @staticmethod
     def poisson_sampling(counts_map: int, seed: int):
@@ -98,7 +99,7 @@ class SimCatalog(object):
             delta_g_input_real = [delta_g_input_real]
             weights = [weights]
 
-        return [self._delta_g_to_number_counts(No, delta_g, seed, mask, weight, alpha, alpha_delta) for No, delta_g, weight in zip(No_observed, delta_g_input_real, weights)]
+        return [self._delta_g_to_number_counts(self.poisson_sampling, No, delta_g, seed, mask, weight, alpha, alpha_delta) for No, delta_g, weight in zip(No_observed, delta_g_input_real, weights)]
     
 
     def save_catalog(self, filename: str, seed: int, No_observed: int, delta_g_input_real: np.ndarray, mask: np.ndarray, weight_maps: np.ndarray, alpha: float, z: np.ndarray, nz: np.ndarray, alpha_delta: float = 1., columnsnames: list = ['RA', 'DEC', 'Z', 'ZBIN', 'WEIGHT']):

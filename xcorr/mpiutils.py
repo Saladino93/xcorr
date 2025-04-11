@@ -28,5 +28,5 @@ class MPIComm(object):
         if self.rank == self.size-1:
             self.iMax = Ntot+start
 
-        self.tasks = range(self.iMin, self.iMax) if tasks is None else tasks[self.iMin:self.iMax]
+        self.tasks = list(range(self.iMin, self.iMax)) if tasks is None else tasks[self.iMin:self.iMax]
 
